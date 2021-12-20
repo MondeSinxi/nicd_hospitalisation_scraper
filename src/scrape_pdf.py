@@ -4,6 +4,7 @@ import pandas as pd
 from pathlib import Path
 from typing import Union
 import typer
+from .utils import get_files, to_snake_case
 
 app = typer.Typer()
 
@@ -50,18 +51,6 @@ def extract_table(pdf_file: Path, page_index: int) -> pd.DataFrame:
     column_names = map(to_snake_case, table[0])
     return pd.DataFrame(table[1:], columns=column_names)
 
-
-def get_files(files_path: str, file_glob: str) -> list[Path]:
-    """Return list of Path objects given a file path and file glob"""
-    files = list(Path(files_path).glob(file_glob))
-    if not files:
-        raise Exception("No files found, make sure path is correct.")
-    return files
-
-
-def to_snake_case(s: str) -> str:
-    """"Convert string to snake case"""
-    return s.replace('\n', ' ').replace(' ', '_').lower()
 
 if __name__ == "__main__":
     app()
