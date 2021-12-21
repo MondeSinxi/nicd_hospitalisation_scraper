@@ -13,18 +13,18 @@ app = typer.Typer()
 
 @app.command()
 def get_nicd_files(start_date: str, end_date: Optional[str] = None, file_path: Optional[str] = "."):
-    start_date = string_to_datetime(start_date)
     dates = datetime_range(start_date, end_date)
     for date in dates:
         _retrieve_nicd_files(date, file_path)
 
+
 def datetime_range(start_date, end_date) -> List[datetime]:
     start_date = string_to_datetime(start_date)
-    if end_date:
-        end_date = string_to_datetime(end_date)
-        return get_date_range(start_date, end_date)
-    else:
+    if not end_date:
         return [start_date]
+    end_date = string_to_datetime(end_date)
+    return get_date_range(start_date, end_date)
+
 
 def string_to_datetime(date: str) -> datetime:
     """ Convert string to timezone object to datetime object"""
