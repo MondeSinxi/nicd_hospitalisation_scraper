@@ -10,12 +10,11 @@ from config import NICD_FILENAME_TEMPLATES
 
 app = typer.Typer()
 
-
 @app.command()
-def get_nicd_files(start_date: str, end_date: Optional[str] = None, file_path: Optional[str] = "."):
+def get_nicd_files(start_date: str, end_date: Optional[str] = None, destination_path: Optional[str] = "."):
     dates = datetime_range(start_date, end_date)
     for date in dates:
-        _retrieve_nicd_files(date, file_path)
+        _retrieve_nicd_files(date, destination_path)
 
 
 def datetime_range(start_date, end_date) -> List[datetime]:
