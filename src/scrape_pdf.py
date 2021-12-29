@@ -6,6 +6,8 @@ from typing import Union, Tuple, Generator, Optional
 import typer
 from utils import get_files, to_snake_case
 from pandas._libs.tslibs.timestamps import Timestamp
+from numpy import NaN
+
 
 app = typer.Typer()
 
@@ -47,7 +49,11 @@ def write_csv(df, output_file_path: Union[Path, str]) -> None:
 
 
 def extract_date(page) -> pd._libs.tslibs.timestamps.Timestamp:
-    date_str = ' '.join(page.extract_text().split()[:4])
+    text = page.extract_text()
+    if not text:
+        logger.warning("No data extracted from file")
+        return
+    date_str = ' '.join(text.split()[:4])
     cleaned_date_str = date_str.replace(',', '').replace(
         ' NICD', '').replace('National Daily Report', '')
     logger.debug(f"Found date: {cleaned_date_str}")
@@ -72,8 +78,17 @@ def clean_df(df) -> pd.DataFrame:
     provinces = ['Eastern Cape', 'Free State', 'Gauteng', 'KwaZulu-Natal',
                                           'Limpopo', 'Mpumalanga', ' North West', 'Northern Cape', 'Western Cape']
     clean_df = df[df['province'].isin(provinces)]
-    return clean_df.astype({'facilities_reporting': 'int', 'admissions_to_date': int, 'died_to_date': int, 'discharged_to_date': int, 'currently_admitted': int,
-              'currently_in_icu': int, 'currently_ventilated': int, 'currently_oxygenated': int, 'admissions_in_previous_day': int}).reset_index(drop=True)
+    # replace empty string with NAN then drop the column
+    clean_df = clean_df.replace(r'^\s*$', NaN, regex=True)
+    clean_df = clean_df.dropna(axis=1)
+    
+    data_columns = list(clean_df.columns)
+    data_columns.remove('province')
+    print(clean_df)
+    types = {c:int for c in data_columns}
+    return clean_df.astype(types).reset_index(drop=True)
+
+        
 
 
 def get_national_data(df: pd.DataFrame) -> pd.DataFrame:
@@ -85,10 +100,11 @@ def aggregate_data(files: Generator[Path, None, None]) -> pd.DataFrame:
     for file in files:
         logger.debug(f"Extract from {file}")
         date, df = extract(file, 1, 0)
-        df = clean_df(df)
-        national_df = get_national_data(df)
-        national_df['date'] = date
-        super_df = super_df.append(national_df)
+        if date:
+            df = clean_df(df)
+            national_df = get_national_data(df)
+            national_df['date'] = date
+            super_df = super_df.append(national_df)
     return super_df.sort_values(by=['date']).reset_index(drop=True)
 
 def print_data(data):
