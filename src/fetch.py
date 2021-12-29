@@ -33,7 +33,7 @@ def string_to_datetime(date: str) -> datetime:
 def get_date_range(start_date: datetime, end_date: datetime) -> List[datetime]:
     """ Return a list of datetime objects for the range between start and end dates in days."""
     delta_dates = end_date - start_date
-    for s in range(delta_dates.days):
+    for s in range(delta_dates.days + 1):
         yield start_date + timedelta(days=s)
 
 
@@ -44,8 +44,12 @@ def _retrieve_nicd_files(date: datetime, destination_path: Path) -> None:
     for file in NICD_FILENAME_TEMPLATES:
         file = file.format(date=date)
         try:
-            url_template = 'https://www.nicd.ac.za/wp-content/uploads/{date:%Y}/{date:%m}/{file}'.format(
-                date=date, file=file)
+            if date.month in (4,5,6) and date.year == 2021:
+                url_template = 'https://www.nicd.ac.za/wp-content/uploads/{date:%Y}/07/{file}'.format(
+                    date=date, file=file)
+            else:
+                url_template = 'https://www.nicd.ac.za/wp-content/uploads/{date:%Y}/{date:%m}/{file}'.format(
+                    date=date, file=file)
             get_file(url_template, destination_path, file)
         except HTTPError:
             continue
@@ -58,7 +62,7 @@ def get_file(url: str, destination_path: str, filename: str) -> None:
     if local_file_path.exists():
         logger.info(f"file exists: {local_file_path}")
         return
-    logger.debug(f"Fetching file from {url}")
+    logger.debug(f"Try fetching file from {url}")
     Path(destination_path).mkdir(parents=True, exist_ok=True)
     request.urlretrieve(url, local_file_path)
     return
