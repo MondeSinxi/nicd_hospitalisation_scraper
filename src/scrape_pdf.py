@@ -110,8 +110,11 @@ def aggregate_data(files: Generator[Path, None, None]) -> pd.DataFrame:
 def print_data(data):
     print(data)
 
-def save_data(data: pd.DataFrame, destination_path: Path):
-    data.to_csv(destination_path)
+def save_data(data: pd.DataFrame, destination_path: Path, db='csv'):
+    if db == 'csv':
+        data.to_csv(destination_path)
+    if db == 'sqlite':
+        pass
 
 @app.command("extract-pdf")
 def main(source_path: str, filename_pattern: str, destination_path: Optional[str] = None, write_file: bool = False, show: bool = True):
