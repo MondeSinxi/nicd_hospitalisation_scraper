@@ -7,7 +7,7 @@ import typer
 from utils import get_files, to_snake_case
 from pandas._libs.tslibs.timestamps import Timestamp
 from numpy import NaN
-
+from db import generate_engine
 
 app = typer.Typer()
 
@@ -16,7 +16,8 @@ destination_path = Path(
 
 
 @app.command()
-def scrape_data(files_path: str = ".", file_glob: str = "*.pdf", page_index: int = 1, write_output: bool = True):
+def scrape_data(files_path: str = ".", file_glob: str = "*.pdf",
+                page_index: int = 1, write_output: bool = True):
     """"
     Scrape PDF tables from a specified page.
 
@@ -40,12 +41,12 @@ def scrape_data(files_path: str = ".", file_glob: str = "*.pdf", page_index: int
     return
 
 
-def write_csv(df, output_file_path: Union[Path, str]) -> None:
+def write_csv(df, destination_path: Union[Path, str]) -> None:
     """"Write csv file from Pandas DataFrame."""
-    logger.info(f"Writing to {output_file_path}")
-    if output_file_path.parent.exists():
-        output_file_path.parent.mkdir(parents=True, exist_ok=True)
-    df.to_csv(output_file_path, index=False)
+    logger.info(f"Writing to {destination_path}")
+    if destination_path.parent.exists():
+        destination_path.parent.mkdir(parents=True, exist_ok=True)
+    df.to_csv(destination_path, index=False)
 
 
 def extract_date(page) -> pd._libs.tslibs.timestamps.Timestamp:
@@ -76,7 +77,7 @@ def extract(pdf_file: Path, page_index_table: int, page_index_date) -> Tuple[Tim
 
 def clean_df(df) -> pd.DataFrame:
     provinces = ['Eastern Cape', 'Free State', 'Gauteng', 'KwaZulu-Natal',
-                                          'Limpopo', 'Mpumalanga', ' North West', 'Northern Cape', 'Western Cape']
+                 'Limpopo', 'Mpumalanga', ' North West', 'Northern Cape', 'Western Cape']
     clean_df = df[df['province'].isin(provinces)]
     # replace empty string with NAN then drop the column
     clean_df = clean_df.replace(r'^\s*$', NaN, regex=True)
@@ -104,7 +105,7 @@ def aggregate_data(files: Generator[Path, None, None]) -> pd.DataFrame:
             df = clean_df(df)
             national_df = get_national_data(df)
             national_df['date'] = date
-            super_df = super_df.append(national_df)
+            super_df = pd.concat([super_df, national_df])
     return super_df.sort_values(by=['date']).reset_index(drop=True)
 
 def print_data(data):
@@ -112,19 +113,21 @@ def print_data(data):
 
 def save_data(data: pd.DataFrame, destination_path: Path, db='csv'):
     if db == 'csv':
-        data.to_csv(destination_path)
+        write_csv(data, destination_path)
     if db == 'sqlite':
-        pass
+        engine = generate_engine()
+        data.to_sql('hospitalisation', engine, if_exists='append')
 
 @app.command("extract-pdf")
-def main(source_path: str, filename_pattern: str, destination_path: Optional[str] = None, write_file: bool = False, show: bool = True):
+def main(source_path: str, filename_pattern: str, destination_path: str = '.',
+         store_data: bool = False, db: str = 'csv', show: bool = True):
     """ Extract national hospitalisation data. """
     timestamp = Timestamp.now().strftime('%Y%m%d%H%M%S')
     files = Path(source_path).glob(filename_pattern)
     agg = aggregate_data(files)
-    if write_file:
+    if store_data:
         destination_file_path = Path(destination_path) / f"{timestamp}_nicd_hospitalisation.csv"
-        agg.to_csv(destination_file_path)
+        save_data(agg, destination_file_path, db=db)
     if show:
         print(agg)
 
