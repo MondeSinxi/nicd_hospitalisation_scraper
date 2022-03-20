@@ -81,6 +81,7 @@ def extract(
 ) -> Tuple[Timestamp, pd.DataFrame]:
     with pdfplumber.open(pdf_file) as pdf:
         table = extract_table(pdf.pages[page_index_table])
+        table = table.convert_dtypes()
         date = extract_date(pdf.pages[page_index_date])
     return (date, table)
 
@@ -136,7 +137,7 @@ def save_data(data: pd.DataFrame, destination_path: Path, db="csv"):
         write_csv(data, destination_path)
     if db == "sqlite":
         engine = generate_engine()
-        data.to_sql("hospitalisation", engine, if_exists="append")
+        data.to_sql("hospitalisation", engine, if_exists="append", index=False)
 
 
 @app.command("extract-pdf")
@@ -155,6 +156,7 @@ def main(
         save_data(agg, Path(destination_file_path), db=db)
     if show:
         logger.info(agg)
+        logger.info(agg.dtypes)
 
 
 if __name__ == "__main__":

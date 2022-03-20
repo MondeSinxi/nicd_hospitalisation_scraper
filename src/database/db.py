@@ -13,7 +13,7 @@ def generate_engine(sqlalchemy_connection_details="sqlite:///nicd_data.db"):
         __tablename__ = "hospitalisation"
 
         id = Column(Integer, primary_key=True)
-        facilities_reporting = Column(String)
+        facilities_reporting = Column(Integer)
         admissions_to_date = Column(Integer)
         died_to_date = Column(Integer)
         discharged_to_date = Column(Integer)
