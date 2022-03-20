@@ -152,7 +152,7 @@ def main(
     files = Path(source_path).glob(filename_pattern)
     agg = aggregate_data(files)
     if store_data:
-        save_data(agg, destination_file_path, db=db)
+        save_data(agg, Path(destination_file_path), db=db)
     if show:
         logger.info(agg)
 
