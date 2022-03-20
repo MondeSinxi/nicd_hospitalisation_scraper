@@ -4,10 +4,12 @@ import pandas as pd
 from pathlib import Path
 from typing import Union, Tuple, Generator, Optional
 import typer
-from utils import get_files, to_snake_case
 from pandas._libs.tslibs.timestamps import Timestamp
 from numpy import NaN
-from db import generate_engine
+
+from database.db import generate_engine
+from utils.file_handler import get_files
+from utils.formatting import to_snake_case
 
 app = typer.Typer()
 

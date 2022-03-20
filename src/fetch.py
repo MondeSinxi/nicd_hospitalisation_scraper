@@ -6,6 +6,7 @@ from datetime import datetime, timedelta
 import typer
 from typing import List, Optional
 from pathlib import Path
+
 from config import NICD_FILENAME_TEMPLATES
 
 app = typer.Typer()
