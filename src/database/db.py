@@ -4,12 +4,13 @@ from sqlalchemy.orm import declarative_base
 
 Base = declarative_base()
 
-def generate_engine(sqlalchemy_connection_details='sqlite:///nicd_data.db'):
-    
+
+def generate_engine(sqlalchemy_connection_details="sqlite:///nicd_data.db"):
+
     engine = create_engine(sqlalchemy_connection_details, echo=True)
 
     class HospitaliastionData(Base):
-        __tablename__ = 'hospitalisation'
+        __tablename__ = "hospitalisation"
 
         id = Column(Integer, primary_key=True)
         province = Column(String)
@@ -26,5 +27,5 @@ def generate_engine(sqlalchemy_connection_details='sqlite:///nicd_data.db'):
         admissions_in_previous_day = Column(Integer)
 
     Base.metadata.create_all(engine)
-    
+
     return engine

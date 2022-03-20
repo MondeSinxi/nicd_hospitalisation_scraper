@@ -11,8 +11,13 @@ from config import NICD_FILENAME_TEMPLATES
 
 app = typer.Typer()
 
+
 @app.command()
-def get_nicd_files(start_date: str, end_date: Optional[str] = None, destination_path: Optional[str] = "."):
+def get_nicd_files(
+    start_date: str,
+    end_date: Optional[str] = None,
+    destination_path: Optional[str] = ".",
+):
     dates = datetime_range(start_date, end_date)
     for date in dates:
         _retrieve_nicd_files(date, destination_path)
@@ -27,12 +32,12 @@ def datetime_range(start_date, end_date) -> List[datetime]:
 
 
 def string_to_datetime(date: str) -> datetime:
-    """ Convert string to timezone object to datetime object"""
+    """Convert string to timezone object to datetime object"""
     return to_datetime(date).to_pydatetime()
 
 
 def get_date_range(start_date: datetime, end_date: datetime) -> List[datetime]:
-    """ Return a list of datetime objects for the range between start and end dates in days."""
+    """Return a list of datetime objects for the range between start and end dates in days."""
     delta_dates = end_date - start_date
     for s in range(delta_dates.days + 1):
         yield start_date + timedelta(days=s)
@@ -45,12 +50,14 @@ def _retrieve_nicd_files(date: datetime, destination_path: Path) -> None:
     for file in NICD_FILENAME_TEMPLATES:
         file = file.format(date=date)
         try:
-            if date.month in (4,5,6) and date.year == 2021:
-                url_template = 'https://www.nicd.ac.za/wp-content/uploads/{date:%Y}/07/{file}'.format(
-                    date=date, file=file)
+            if date.month in (4, 5, 6) and date.year == 2021:
+                url_template = "https://www.nicd.ac.za/wp-content/uploads/{date:%Y}/07/{file}".format(
+                    date=date, file=file
+                )
             else:
-                url_template = 'https://www.nicd.ac.za/wp-content/uploads/{date:%Y}/{date:%m}/{file}'.format(
-                    date=date, file=file)
+                url_template = "https://www.nicd.ac.za/wp-content/uploads/{date:%Y}/{date:%m}/{file}".format(
+                    date=date, file=file
+                )
             get_file(url_template, destination_path, file)
         except HTTPError:
             continue
