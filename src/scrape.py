@@ -9,11 +9,12 @@ from numpy import NaN
 
 from database.db import generate_engine
 from utils.file_handler import get_files
-from utils.formatting import to_snake_case
+from utils.formatting import to_snake_case, rename_column
 
 app = typer.Typer()
 
 destination_path = Path("/home/monde/nicd_hospitalisation_scraper/extracted_data")
+engine = generate_engine()
 
 
 @app.command()
@@ -59,11 +60,19 @@ def extract_date(page) -> pd._libs.tslibs.timestamps.Timestamp:
     if not text:
         logger.warning("No data extracted from file")
         return
-    date_str = " ".join(text.split()[:4])
+    date_str = " ".join(text.split()[:7])
+    logger.info(date_str)
     cleaned_date_str = (
-        date_str.replace(",", "")
-        .replace(" NICD", "")
+        date_str.replace(" NICD", "")
+        .replace(",", "")
+        .replace("Na\x00onal", "")
+        .replace("COVID-19", "")
+        .replace("Hospital", "")
         .replace("National Daily Report", "")
+        .replace("Power BI Desktop ", "")
+        .replace("Surveillance", "")
+        .replace("v3", "")
+        .replace("pg1", "")
     )
     logger.debug(f"Found date: {cleaned_date_str}")
     return pd.to_datetime(cleaned_date_str)
@@ -72,8 +81,16 @@ def extract_date(page) -> pd._libs.tslibs.timestamps.Timestamp:
 def extract_table(page) -> pd.DataFrame:
     """ "Extract largest table from a page in a pdf file."""
     table = page.extract_table()
+    logger.debug(table[0])
     column_names = map(to_snake_case, table[0])
+    column_names = map(rename_column, column_names)
     return pd.DataFrame(table[1:], columns=column_names)
+
+
+def add_hash_to_df(df: pd.DataFrame) -> pd.DataFrame:
+    hashes = [hash(str(row.values)) for idx, row in df.iterrows()]
+    df["id"] = hashes
+    return df
 
 
 def extract(
@@ -95,9 +112,12 @@ def clean_df(df) -> pd.DataFrame:
         "Limpopo",
         "Mpumalanga",
         " North West",
+        "North West",
         "Northern Cape",
         "Western Cape",
+        "Total",
     ]
+    logger.debug(df)
     clean_df = df[df["province"].isin(provinces)]
     # replace empty string with NAN then drop the column
     clean_df = clean_df.replace(r"^\s*$", NaN, regex=True)
@@ -116,16 +136,14 @@ def get_national_data(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def aggregate_data(files: Generator[Path, None, None]) -> pd.DataFrame:
-    super_df = pd.DataFrame({})
     for file in files:
         logger.debug(f"Extract from {file}")
         date, df = extract(file, 1, 0)
         if date:
             df = clean_df(df)
-            national_df = get_national_data(df)
-            national_df["date"] = date
-            super_df = pd.concat([super_df, national_df])
-    return super_df.sort_values(by=["date"]).reset_index(drop=True)
+            df["date"] = date
+            df = add_hash_to_df(df)
+            yield date, df.sort_values(by=["date"]).reset_index(drop=True)
 
 
 def print_data(data):
@@ -136,7 +154,7 @@ def save_data(data: pd.DataFrame, destination_path: Path, db="csv"):
     if db == "csv":
         write_csv(data, destination_path)
     if db == "sqlite":
-        engine = generate_engine()
+        logger.debug(f"writing to database:\n {data}")
         data.to_sql("hospitalisation", engine, if_exists="append", index=False)
 
 
@@ -144,19 +162,18 @@ def save_data(data: pd.DataFrame, destination_path: Path, db="csv"):
 def main(
     source_path: str,
     filename_pattern: str,
-    destination_file_path: str = "nicd.csv",
+    destination_path: str = ".",
     store_data: bool = False,
     db: str = "csv",
-    show: bool = True,
 ):
     """Extract national hospitalisation data."""
     files = Path(source_path).glob(filename_pattern)
     agg = aggregate_data(files)
+    destination_path = Path(destination_path)
     if store_data:
-        save_data(agg, Path(destination_file_path), db=db)
-    if show:
-        logger.info(agg)
-        logger.info(agg.dtypes)
+        for i, data in enumerate(agg):
+            destination_file_path = destination_path / f"{data[0]:%Y-%m-%d}_nicd.csv"
+            save_data(data[1], destination_file_path, db=db)
 
 
 if __name__ == "__main__":

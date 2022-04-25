@@ -37,7 +37,10 @@ def string_to_datetime(date: str) -> datetime:
 
 
 def get_date_range(start_date: datetime, end_date: datetime) -> List[datetime]:
-    """Return a list of datetime objects for the range between start and end dates in days."""
+    """
+    Return a list of datetime objects for the range
+    between start and end dates in days.
+    """
     delta_dates = end_date - start_date
     for s in range(delta_dates.days + 1):
         yield start_date + timedelta(days=s)
@@ -45,7 +48,8 @@ def get_date_range(start_date: datetime, end_date: datetime) -> List[datetime]:
 
 def _retrieve_nicd_files(date: datetime, destination_path: Path) -> None:
     """
-    File naming is incosistent on the serever side; we have to try as many combinations as possible whilst avoiding 404 errors.
+    File naming is incosistent on the serever side;
+    we have to try as many combinations as possible whilst avoiding 404 errors.
     """
     for file in NICD_FILENAME_TEMPLATES:
         file = file.format(date=date)

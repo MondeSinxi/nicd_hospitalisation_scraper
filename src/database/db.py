@@ -11,8 +11,10 @@ def generate_engine(sqlalchemy_connection_details="sqlite:///nicd_data.db"):
 
     class HospitaliastionData(Base):
         __tablename__ = "hospitalisation"
+        __table_args__ = {'extend_existing': True}
 
         id = Column(Integer, primary_key=True)
+        province = Column(String)
         facilities_reporting = Column(Integer)
         admissions_to_date = Column(Integer)
         died_to_date = Column(Integer)
